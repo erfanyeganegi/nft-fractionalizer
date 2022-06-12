@@ -17,6 +17,10 @@
 
 (define-map uris uint (string-ascii 256))
 
+(define-constant err-unauthorized (err u100))
+
+(define-constant err-insufficient-balance (err u200))
+
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
         {
@@ -57,8 +61,8 @@
     (
       (balance (unwrap-panic (get-balance id sender)))
     )
-    (asserts! (is-eq tx-sender sender) (err u0))
-    (asserts! (<= amount balance) (err u0))
+    (asserts! (is-eq tx-sender sender) err-unauthorized)
+    (asserts! (<= amount balance) err-insufficient-balance)
     (try! (ft-transfer? fractions amount sender recipient))
     (map-set balances 
       {
