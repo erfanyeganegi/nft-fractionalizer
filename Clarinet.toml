@@ -5,6 +5,9 @@ description = "DROPLinked NFT Fractionalizer"
 requirements = []
 boot_contracts = ["pox", "costs-v2", "bns"]
 
+[contracts.sft-trait]
+path = "contracts/traits/sft-trait.clar"
+
 [contracts.nft-fractionalizer]
 path = "contracts/nft-fractionalizer.clar"
 
