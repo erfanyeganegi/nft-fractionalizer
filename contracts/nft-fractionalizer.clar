@@ -53,7 +53,38 @@
     (sender principal)
     (recipient principal)
   )
-  (ok true)
+  (let 
+    (
+      (balance (unwrap-panic (get-balance id sender)))
+    )
+    (asserts! (is-eq tx-sender sender) (err u0))
+    (asserts! (<= amount balance) (err u0))
+    (try! (ft-transfer? fractions amount sender recipient))
+    (map-set balances 
+      {
+        id: id,
+        owner: sender
+      }
+      (- balance amount)
+    )
+    (map-set balances 
+      {
+        id: id,
+        owner: recipient
+      }
+      (+ (unwrap-panic (get-balance id sender)) amount)
+    )
+    (print 
+      {
+        type: "sft_transfer",
+        token-id: id,
+        amount: amount,
+        sender: sender,
+        recipient: recipient
+      }
+    )
+    (ok true)
+  )
 )
 
 (define-public 
@@ -64,5 +95,9 @@
     (recipient principal)
     (memo (buff 34))
   )
-  (ok true)
+  (begin
+    (try! (transfer id amount sender recipient))
+    (print memo)
+    (ok true)
+  )
 )
