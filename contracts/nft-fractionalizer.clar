@@ -1,3 +1,5 @@
+(define-constant contract-owner tx-sender)
+
 (define-fungible-token fractions)
 (define-non-fungible-token fractional-nft uint)
 
