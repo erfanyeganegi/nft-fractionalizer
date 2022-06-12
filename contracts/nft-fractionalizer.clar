@@ -15,6 +15,8 @@
 
 (define-map supplies uint uint)
 
+(define-map uris uint (string-ascii 256))
+
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
         {
@@ -37,7 +39,7 @@
 )
 
 (define-read-only (get-token-uri (id uint)) 
-  (ok none)
+  (ok (default-to none (some (map-get? uris id))))
 )
 
 (define-read-only (get-decimals (id uint)) 
