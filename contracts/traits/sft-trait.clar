@@ -1,4 +1,4 @@
-(define-trait sip013-semi-fungible-token-trait
+(define-trait sft-trait
 	(
 		(get-balance (uint principal) (response uint uint))
 		(get-overall-balance (principal) (response uint uint))
