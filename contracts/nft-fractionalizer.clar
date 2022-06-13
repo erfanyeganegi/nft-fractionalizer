@@ -17,6 +17,8 @@
 
 (define-map uris uint (string-ascii 256))
 
+(define-data-var identifier uint u0)
+
 (define-constant err-unauthorized (err u100))
 
 (define-constant err-insufficient-balance (err u200))
@@ -97,6 +99,29 @@
   (begin
     (try! (transfer id amount sender recipient))
     (print memo)
+    (ok true)
+  )
+)
+
+(define-public (mint (recipient principal) (supply uint) (uri (string-ascii 256))) 
+  (let 
+    (
+      (nftID (+ (var-get identifier) u1))
+    )
+    (asserts! (is-eq tx-sender contract-owner) (err u100))
+    (try! (ft-mint? fractions supply recipient))
+    (try! (nft-mint? fractional-nft nftID (as-contract tx-sender)))
+    (map-set supplies nftID supply)
+    (map-set balances { id: nftID, owner: recipient } supply)
+    (map-set uris nftID uri)
+    (print 
+      {
+        type: "sft_mint",
+        token-id: nftID,
+        amount: supply,
+        recipient: recipient
+      }
+    )
     (ok true)
   )
 )
