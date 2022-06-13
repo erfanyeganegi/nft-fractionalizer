@@ -126,6 +126,7 @@
         recipient: recipient
       }
     )
+    (var-set identifier nftID)
     (ok true)
   )
 )
