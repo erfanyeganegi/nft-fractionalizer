@@ -129,3 +129,27 @@
     (ok true)
   )
 )
+
+(define-public (retract (id uint) (recipient principal)) 
+  (let 
+    (
+      (balance (unwrap-panic (get-balance id recipient)))
+      (supply (unwrap-panic (get-total-supply id)))
+    )
+    (asserts! (is-eq tx-sender recipient) err-unauthorized)
+    (asserts! (is-eq balance supply) err-insufficient-balance)
+    (as-contract (try! (nft-transfer? fractional-nft id tx-sender recipient)))
+    (try! (ft-burn? fractions balance recipient))
+    (map-delete balances { id: id, owner: recipient })
+    (map-delete supplies id)
+    (print 
+      {
+        type: "sft_burn",
+        token-id: id,
+        amount: balance,
+        sender: recipient
+      }
+    )
+    (ok true)
+  )
+)
