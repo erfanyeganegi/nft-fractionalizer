@@ -137,25 +137,25 @@
 (define-public (mint (recipient principal) (supply uint) (uri (string-ascii 256))) 
   (let 
     (
-      (nftID (+ (var-get identifier) u1))
+      (nft-id (+ (var-get identifier) u1))
     )
     (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
     (asserts! (> supply u0) err-invalid-supply-value)
     (try! (ft-mint? fractions supply recipient))
-    (try! (nft-mint? fractional-nft nftID (as-contract tx-sender)))
-    (map-set supplies nftID supply)
-    (map-set balances { id: nftID, owner: recipient } supply)
-    (map-set uris nftID uri)
+    (try! (nft-mint? fractional-nft nft-id (as-contract tx-sender)))
+    (map-set supplies nft-id supply)
+    (map-set balances { id: nft-id, owner: recipient } supply)
+    (map-set uris nft-id uri)
     (print 
       {
         type: "sft_mint",
-        token-id: nftID,
+        token-id: nft-id,
         amount: supply,
         recipient: recipient
       }
     )
-    (var-set identifier nftID)
-    (ok nftID)
+    (var-set identifier nft-id)
+    (ok nft-id)
   )
 )
 
@@ -192,28 +192,28 @@
   )
   (let 
     (
-      (nftID (+ (var-get identifier) u1))
-      (nftOwner (unwrap! (try! (contract-call? nft get-owner id)) err-unkown-nft-owner))
-      (nftURI (unwrap! (try! (contract-call? nft get-token-uri id)) err-unknown-nft-uri))
+      (nft-id (+ (var-get identifier) u1))
+      (nft-owner (unwrap! (try! (contract-call? nft get-owner id)) err-unkown-nft-owner))
+      (nft-uri (unwrap! (try! (contract-call? nft get-token-uri id)) err-unknown-nft-uri))
     )
     (asserts! (is-eq tx-sender sender) err-unauthorized)
-    (asserts! (is-eq tx-sender nftOwner) err-nft-owner-only)
+    (asserts! (is-eq tx-sender nft-owner) err-nft-owner-only)
     (asserts! (is-verified-nft nft) err-unverified-nft-contract)
     (asserts! (> supply u0) err-invalid-supply-value)
     (try! (contract-call? nft transfer id sender (as-contract tx-sender)))
     (try! (ft-mint? fractions supply sender))
-    (map-set supplies nftID supply)
-    (map-set balances { id: nftID, owner: sender } supply)
-    (map-set uris nftID nftURI)
+    (map-set supplies nft-id supply)
+    (map-set balances { id: nft-id, owner: sender } supply)
+    (map-set uris nft-id nft-uri)
     (print 
       {
         type: "sft_mint",
-        token-id: nftID,
+        token-id: nft-id,
         amount: supply,
         recipient: sender
       }
     )
-    (var-set identifier nftID)
-    (ok nftID)
+    (var-set identifier nft-id)
+    (ok nft-id)
   )
 )
