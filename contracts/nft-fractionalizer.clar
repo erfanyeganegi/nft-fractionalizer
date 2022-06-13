@@ -1,5 +1,7 @@
 (impl-trait .sft-trait.sft-trait)
 
+(use-trait nft-trait .nft-trait.nft-trait)
+
 (define-constant contract-owner tx-sender)
 
 (define-fungible-token fractions)
@@ -21,10 +23,14 @@
 
 (define-constant err-contract-owner-only (err u100))
 (define-constant err-unauthorized (err u101))
+(define-constant err-nft-owner-only (err u102))
 
 (define-constant err-insufficient-balance (err u200))
 
 (define-constant err-invalid-supply-value (err u300))
+
+(define-constant err-unkown-nft-owner (err u400))
+(define-constant err-unknown-nft-uri (err u401))
 
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
@@ -155,3 +161,36 @@
   )
 )
 
+(define-public 
+  (fractionalize 
+    (nft <nft-trait>)
+    (id uint)
+    (supply uint)
+    (sender principal)
+  )
+  (let 
+    (
+      (nftID (+ (var-get identifier) u1))
+      (nftOwner (unwrap! (try! (contract-call? nft get-owner id)) err-unkown-nft-owner))
+      (nftURI (unwrap! (try! (contract-call? nft get-token-uri id)) err-unknown-nft-uri))
+    )
+    (asserts! (is-eq tx-sender sender) err-unauthorized)
+    (asserts! (is-eq tx-sender nftOwner) err-nft-owner-only)
+    (asserts! (> supply u0) err-invalid-supply-value)
+    (try! (contract-call? nft transfer id sender (as-contract tx-sender)))
+    (try! (ft-mint? fractions supply sender))
+    (map-set supplies nftID supply)
+    (map-set balances { id: nftID, owner: sender } supply)
+    (map-set uris nftID nftURI)
+    (print 
+      {
+        type: "sft_mint",
+        token-id: nftID,
+        amount: supply,
+        recipient: sender
+      }
+    )
+    (var-set identifier nftID)
+    (ok nftID)
+  )
+)
