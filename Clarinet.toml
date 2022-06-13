@@ -11,6 +11,9 @@ path = "contracts/traits/sft-trait.clar"
 [contracts.ft-trait]
 path = "contracts/traits/ft-trait.clar"
 
+[contracts.nft-trait]
+path = "contracts/traits/nft-trait.clar"
+
 [contracts.nft-fractionalizer]
 path = "contracts/nft-fractionalizer.clar"
 
