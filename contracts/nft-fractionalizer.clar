@@ -28,10 +28,10 @@
 
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
-        {
-          id: id,
-          owner: who
-        }
+    {
+      id: id,
+      owner: who
+    }
   )))
 )
 
