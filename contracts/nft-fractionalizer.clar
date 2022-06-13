@@ -59,25 +59,20 @@
   )
   (let 
     (
-      (balance (unwrap-panic (get-balance id sender)))
+      (senderBalance (unwrap-panic (get-balance id sender)))
+      (recipientBalance (unwrap-panic (get-balance id recipient)))
     )
-    (asserts! (is-eq tx-sender sender) err-unauthorized)
-    (asserts! (<= amount balance) err-insufficient-balance)
+    (asserts! 
+      (or
+        (is-eq tx-sender sender)
+        (is-eq tx-sender contract-caller)
+      )
+      err-unauthorized
+    )
+    (asserts! (<= amount senderBalance) err-insufficient-balance)
     (try! (ft-transfer? fractions amount sender recipient))
-    (map-set balances 
-      {
-        id: id,
-        owner: sender
-      }
-      (- balance amount)
-    )
-    (map-set balances 
-      {
-        id: id,
-        owner: recipient
-      }
-      (+ (unwrap-panic (get-balance id sender)) amount)
-    )
+    (map-set balances { id: id, owner: sender } (- senderBalance amount))
+    (map-set balances { id: id, owner: recipient } (+ recipientBalance amount))
     (print 
       {
         type: "sft_transfer",
