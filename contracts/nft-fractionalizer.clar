@@ -127,7 +127,7 @@
       }
     )
     (var-set identifier nftID)
-    (ok true)
+    (ok nftID)
   )
 )
 
@@ -154,3 +154,4 @@
     (ok true)
   )
 )
+
