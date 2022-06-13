@@ -27,6 +27,7 @@
 (define-constant err-contract-owner-only (err u100))
 (define-constant err-unauthorized (err u101))
 (define-constant err-nft-owner-only (err u102))
+(define-constant err-unallowed-recipient (err u103))
 
 (define-constant err-insufficient-balance (err u200))
 
@@ -100,6 +101,7 @@
       (recipientBalance (unwrap-panic (get-balance id recipient)))
     )
     (asserts! (is-eq tx-sender sender) err-unauthorized)
+    (asserts! (not (is-eq sender recipient)) err-unallowed-recipient)
     (asserts! (<= amount senderBalance) err-insufficient-balance)
     (try! (ft-transfer? fractions amount sender recipient))
     (map-set balances { id: id, owner: sender } (- senderBalance amount))
