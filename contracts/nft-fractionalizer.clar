@@ -1,6 +1,7 @@
 (impl-trait .sft-trait.sft-trait)
 
 (use-trait nft-trait .nft-trait.nft-trait)
+(use-trait ft-trait .ft-trait.ft-trait)
 
 (define-constant contract-owner tx-sender)
 
@@ -39,6 +40,10 @@
   (default-to false (map-get? verified-contracts (contract-of nft)))
 )
 
+(define-read-only (is-verified-ft (ft <ft-trait>)) 
+  (default-to false (map-get? verified-contracts (contract-of ft)))
+)
+
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
     {
@@ -66,6 +71,20 @@
 
 (define-read-only (get-decimals (id uint)) 
   (ok u0)
+)
+
+(define-public (verify-nft (nft <nft-trait>) (verified bool))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
+    (ok (map-set verified-contracts (contract-of nft) verified))
+  )
+)
+
+(define-public (verify-ft (ft <ft-trait>) (verified bool))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
+    (ok (map-set verified-contracts (contract-of ft) verified))
+  )
 )
 
 (define-public 
