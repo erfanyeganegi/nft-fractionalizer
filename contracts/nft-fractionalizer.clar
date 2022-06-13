@@ -24,6 +24,8 @@
 
 (define-constant err-insufficient-balance (err u200))
 
+(define-constant err-invalid-supply-value (err u300))
+
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
         {
@@ -110,6 +112,7 @@
       (nftID (+ (var-get identifier) u1))
     )
     (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
+    (asserts! (> supply u0) err-invalid-supply-value)
     (try! (ft-mint? fractions supply recipient))
     (try! (nft-mint? fractional-nft nftID (as-contract tx-sender)))
     (map-set supplies nftID supply)
