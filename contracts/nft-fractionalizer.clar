@@ -19,6 +19,8 @@
 
 (define-map uris uint (string-ascii 256))
 
+(define-map verified-contracts principal bool)
+
 (define-data-var identifier uint u0)
 
 (define-constant err-contract-owner-only (err u100))
@@ -31,6 +33,11 @@
 
 (define-constant err-unkown-nft-owner (err u400))
 (define-constant err-unknown-nft-uri (err u401))
+(define-constant err-unverified-nft-contract (err u403))
+
+(define-read-only (is-verified-nft (nft <nft-trait>)) 
+  (default-to false (map-get? verified-contracts (contract-of nft)))
+)
 
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
@@ -73,13 +80,7 @@
       (senderBalance (unwrap-panic (get-balance id sender)))
       (recipientBalance (unwrap-panic (get-balance id recipient)))
     )
-    (asserts! 
-      (or
-        (is-eq tx-sender sender)
-        (is-eq tx-sender contract-caller)
-      )
-      err-unauthorized
-    )
+    (asserts! (is-eq tx-sender sender) err-unauthorized)
     (asserts! (<= amount senderBalance) err-insufficient-balance)
     (try! (ft-transfer? fractions amount sender recipient))
     (map-set balances { id: id, owner: sender } (- senderBalance amount))
@@ -176,6 +177,7 @@
     )
     (asserts! (is-eq tx-sender sender) err-unauthorized)
     (asserts! (is-eq tx-sender nftOwner) err-nft-owner-only)
+    (asserts! (is-verified-nft nft) err-unverified-nft-contract)
     (asserts! (> supply u0) err-invalid-supply-value)
     (try! (contract-call? nft transfer id sender (as-contract tx-sender)))
     (try! (ft-mint? fractions supply sender))
