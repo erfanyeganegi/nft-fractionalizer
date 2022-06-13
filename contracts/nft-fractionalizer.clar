@@ -19,7 +19,8 @@
 
 (define-data-var identifier uint u0)
 
-(define-constant err-unauthorized (err u100))
+(define-constant err-contract-owner-only (err u100))
+(define-constant err-unauthorized (err u101))
 
 (define-constant err-insufficient-balance (err u200))
 
@@ -108,7 +109,7 @@
     (
       (nftID (+ (var-get identifier) u1))
     )
-    (asserts! (is-eq tx-sender contract-owner) (err u100))
+    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
     (try! (ft-mint? fractions supply recipient))
     (try! (nft-mint? fractional-nft nftID (as-contract tx-sender)))
     (map-set supplies nftID supply)
