@@ -33,7 +33,7 @@
 
 (define-constant err-invalid-supply-value (err u300))
 
-(define-constant err-unkown-nft-owner (err u400))
+(define-constant err-unknown-nft-owner (err u400))
 (define-constant err-unknown-nft-uri (err u401))
 (define-constant err-unverified-nft-contract (err u403))
 
@@ -193,7 +193,7 @@
   (let 
     (
       (nft-id (+ (var-get identifier) u1))
-      (nft-owner (unwrap! (try! (contract-call? nft get-owner id)) err-unkown-nft-owner))
+      (nft-owner (unwrap! (try! (contract-call? nft get-owner id)) err-unknown-nft-owner))
       (nft-uri (unwrap! (try! (contract-call? nft get-token-uri id)) err-unknown-nft-uri))
     )
     (asserts! (is-eq tx-sender sender) err-unauthorized)
