@@ -20,6 +20,8 @@
 
 (define-map uris uint (string-ascii 256))
 
+(define-map verified-contracts principal bool)
+
 (define-data-var identifier uint u0)
 
 (define-constant err-contract-owner-only (err u100))
@@ -110,7 +112,11 @@
   )
 )
 
-(define-public (mint (recipient principal) (supply uint) (uri (string-ascii 256))) 
+(define-public 
+  (mint
+    (recipient principal)
+    (supply uint)
+    (uri (string-ascii 256))) 
   (let 
     (
       (nft-id (+ (var-get identifier) u1))
@@ -156,5 +162,38 @@
       }
     )
     (ok true)
+  )
+)
+
+(define-public 
+  (fractionalize
+    (owner principal)
+    (nft <nft-trait>)
+    (id uint)
+    (supply uint)
+  )
+  (let 
+    (
+      (nft-id (+ (var-get identifier) u1))
+      (uri (unwrap! (contract-call? nft get-token-uri id) err-unknown-nft-uri))
+    )
+    (asserts! (is-eq tx-sender owner) err-nft-owner-only)
+    (asserts! (> supply u0) err-invalid-supply-value)
+    (asserts! (default-to false (map-get? verified-contracts (contract-of nft))) err-unverified-nft-contract)
+    (try! (contract-call? nft transfer id owner (as-contract tx-sender)))
+    (try! (ft-mint? fractions supply owner))
+    (map-set supplies nft-id supply)
+    (map-set balances { id: nft-id, owner: owner } supply)
+    (map-set uris nft-id (default-to "" uri))
+    (print 
+      {
+        type: "sft_mint",
+        token-id: nft-id,
+        amount: supply,
+        recipient: owner
+      }
+    )
+    (var-set identifier nft-id)
+    (ok nft-id)
   )
 )
