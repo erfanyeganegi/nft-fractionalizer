@@ -37,6 +37,13 @@
 (define-constant err-unknown-nft-uri (err u401))
 (define-constant err-unverified-nft-contract (err u403))
 
+(define-public (verify-contract (contract principal) (verified bool)) 
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
+    (ok (map-set verified-contracts contract verified))
+  )
+)
+
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
     {
