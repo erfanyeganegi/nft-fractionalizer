@@ -20,6 +20,8 @@
 
 (define-map uris uint (string-ascii 256))
 
+(define-map verified-contracts principal bool)
+
 (define-data-var identifier uint u0)
 
 (define-constant err-contract-owner-only (err u100))
@@ -34,6 +36,13 @@
 (define-constant err-unknown-nft-owner (err u400))
 (define-constant err-unknown-nft-uri (err u401))
 (define-constant err-unverified-nft-contract (err u403))
+
+(define-public (verify-contract (contract principal) (verified bool)) 
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
+    (ok (map-set verified-contracts contract verified))
+  )
+)
 
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
@@ -110,7 +119,11 @@
   )
 )
 
-(define-public (mint (recipient principal) (supply uint) (uri (string-ascii 256))) 
+(define-public 
+  (mint
+    (recipient principal)
+    (supply uint)
+    (uri (string-ascii 256))) 
   (let 
     (
       (nft-id (+ (var-get identifier) u1))
@@ -156,5 +169,40 @@
       }
     )
     (ok true)
+  )
+)
+
+(define-public 
+  (fractionalize
+    (recipient principal)
+    (nft <nft-trait>)
+    (id uint)
+    (supply uint)
+  )
+  (let 
+    (
+      (nft-id (+ (var-get identifier) u1))
+      (uri (try! (contract-call? nft get-token-uri id)))
+      (owner (unwrap! (try! (contract-call? nft get-owner id)) err-unknown-nft-owner))
+    )
+    (asserts! (is-eq tx-sender recipient) err-nft-owner-only)
+    (asserts! (is-eq tx-sender owner) err-nft-owner-only)
+    (asserts! (default-to false (map-get? verified-contracts (contract-of nft))) err-unverified-nft-contract)
+    (asserts! (> supply u0) err-invalid-supply-value)
+    (try! (contract-call? nft transfer id recipient (as-contract tx-sender)))
+    (try! (ft-mint? fractions supply recipient))
+    (map-set supplies nft-id supply)
+    (map-set balances { id: nft-id, owner: recipient } supply)
+    (map-set uris nft-id (default-to "" uri))
+    (print 
+      {
+        type: "sft_mint",
+        token-id: nft-id,
+        amount: supply,
+        recipient: recipient
+      }
+    )
+    (var-set identifier nft-id)
+    (ok nft-id)
   )
 )
