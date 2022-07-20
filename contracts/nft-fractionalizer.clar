@@ -174,7 +174,7 @@
 
 (define-public 
   (fractionalize
-    (owner principal)
+    (recipient principal)
     (nft <nft-trait>)
     (id uint)
     (supply uint)
@@ -182,22 +182,24 @@
   (let 
     (
       (nft-id (+ (var-get identifier) u1))
-      (uri (unwrap! (contract-call? nft get-token-uri id) err-unknown-nft-uri))
+      (uri (try! (contract-call? nft get-token-uri id)))
+      (owner (unwrap! (try! (contract-call? nft get-owner id)) err-unknown-nft-owner))
     )
+    (asserts! (is-eq tx-sender recipient) err-nft-owner-only)
     (asserts! (is-eq tx-sender owner) err-nft-owner-only)
     (asserts! (> supply u0) err-invalid-supply-value)
     (asserts! (default-to false (map-get? verified-contracts (contract-of nft))) err-unverified-nft-contract)
-    (try! (contract-call? nft transfer id owner (as-contract tx-sender)))
-    (try! (ft-mint? fractions supply owner))
+    (try! (contract-call? nft transfer id recipient (as-contract tx-sender)))
+    (try! (ft-mint? fractions supply recipient))
     (map-set supplies nft-id supply)
-    (map-set balances { id: nft-id, owner: owner } supply)
+    (map-set balances { id: nft-id, owner: recipient } supply)
     (map-set uris nft-id (default-to "" uri))
     (print 
       {
         type: "sft_mint",
         token-id: nft-id,
         amount: supply,
-        recipient: owner
+        recipient: recipient
       }
     )
     (var-set identifier nft-id)
