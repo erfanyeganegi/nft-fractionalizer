@@ -210,3 +210,12 @@
     (ok nft-id)
   )
 )
+
+(define-public 
+  (defractionalize
+    (recipient principal)
+    (nft <nft-trait>)
+    (id uint)
+  )
+  (ok true)
+)
