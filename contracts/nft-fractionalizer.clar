@@ -226,5 +226,29 @@
     (nft <nft-trait>)
     (id uint)
   )
-  (ok true)
+  (let 
+    (
+      (nft-id (unwrap! (map-get? fractionalized-nfts { id: id, nft: (contract-of nft) }) (err u0)))
+      (balance (unwrap-panic (get-balance id recipient)))
+      (supply (unwrap-panic (get-total-supply id)))
+    )
+    (asserts! (is-eq tx-sender recipient) err-unauthorized)
+    (asserts! (is-eq balance supply) err-insufficient-balance)
+    (asserts! (unwrap-panic (is-verified-contract (contract-of nft))) err-unverified-nft-contract)
+    (as-contract (try! (contract-call? nft transfer id tx-sender recipient)))
+    (try! (ft-burn? fractions balance recipient))
+    (map-delete balances { id: id, owner: recipient })
+    (map-delete supplies id)
+    (map-delete fractionalized-nfts { id: id, nft: (contract-of nft) })
+    (map-delete uris nft-id)
+    (print 
+      {
+        type: "sft_burn",
+        token-id: id,
+        amount: balance,
+        sender: recipient
+      }
+    )
+    (ok true)
+  )
 )
