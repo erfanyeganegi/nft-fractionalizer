@@ -22,6 +22,14 @@
 
 (define-map verified-contracts principal bool)
 
+(define-map fractionalized-nfts 
+  {
+    id: uint,
+    nft: principal
+  }
+  uint
+)
+
 (define-data-var identifier uint u0)
 
 (define-constant err-contract-owner-only (err u100))
@@ -198,6 +206,7 @@
     (map-set supplies nft-id supply)
     (map-set balances { id: nft-id, owner: recipient } supply)
     (map-set uris nft-id uri)
+    (map-set fractionalized-nfts { id: id, nft: (contract-of nft) } nft-id)
     (print 
       {
         type: "sft_mint",
