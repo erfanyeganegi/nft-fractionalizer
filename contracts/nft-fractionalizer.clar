@@ -20,8 +20,6 @@
 
 (define-map uris uint (string-ascii 256))
 
-(define-map verified-contracts principal bool)
-
 (define-map fractionalized-nfts 
   {
     id: uint,
@@ -32,29 +30,13 @@
 
 (define-data-var identifier uint u0)
 
-(define-constant err-contract-owner-only (err u100))
-(define-constant err-unauthorized (err u101))
+(define-constant err-nft-recipient-only (err u101))
 (define-constant err-nft-owner-only (err u102))
 (define-constant err-unallowed-recipient (err u103))
 
 (define-constant err-insufficient-balance (err u200))
 
 (define-constant err-invalid-supply-value (err u300))
-
-(define-constant err-unknown-nft-owner (err u400))
-(define-constant err-unknown-nft-uri (err u401))
-(define-constant err-unverified-nft-contract (err u403))
-
-(define-public (verify-contract (contract principal) (verified bool)) 
-  (begin
-    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
-    (ok (map-set verified-contracts contract verified))
-  )
-)
-
-(define-public (is-verified-contract (contract principal))
-  (ok (default-to false (map-get? verified-contracts contract)))
-)
 
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
@@ -85,19 +67,13 @@
   (ok u0)
 )
 
-(define-public 
-  (transfer 
-    (id uint) 
-    (amount uint) 
-    (sender principal)
-    (recipient principal)
-  )
+(define-public (transfer (id uint) (amount uint) (sender principal) (recipient principal))
   (let 
     (
       (senderBalance (unwrap-panic (get-balance id sender)))
       (recipientBalance (unwrap-panic (get-balance id recipient)))
     )
-    (asserts! (is-eq tx-sender sender) err-unauthorized)
+    (asserts! (is-eq tx-sender sender) err-nft-owner-only)
     (asserts! (not (is-eq sender recipient)) err-unallowed-recipient)
     (asserts! (<= amount senderBalance) err-insufficient-balance)
     (try! (ft-transfer? fractions amount sender recipient))
@@ -116,14 +92,7 @@
   )
 )
 
-(define-public 
-  (transfer-memo
-    (id uint) 
-    (amount uint) 
-    (sender principal)
-    (recipient principal)
-    (memo (buff 34))
-  )
+(define-public (transfer-memo (id uint) (amount uint) (sender principal) (recipient principal) (memo (buff 34)))
   (begin
     (try! (transfer id amount sender recipient))
     (print memo)
@@ -131,16 +100,9 @@
   )
 )
 
-(define-public 
-  (mint
-    (recipient principal)
-    (supply uint)
-    (uri (string-ascii 256))) 
-  (let 
-    (
-      (nft-id (+ (var-get identifier) u1))
-    )
-    (asserts! (is-eq tx-sender contract-owner) err-contract-owner-only)
+(define-public (mint (recipient principal) (supply uint) (uri (string-ascii 256))) 
+  (let ((nft-id (+ (var-get identifier) u1)))
+    (asserts! (is-eq tx-sender recipient) err-nft-recipient-only)
     (asserts! (> supply u0) err-invalid-supply-value)
     (try! (ft-mint? fractions supply recipient))
     (try! (nft-mint? fractional-nft nft-id (as-contract tx-sender)))
@@ -166,81 +128,12 @@
       (balance (unwrap-panic (get-balance id recipient)))
       (supply (unwrap-panic (get-total-supply id)))
     )
-    (asserts! (is-eq tx-sender recipient) err-unauthorized)
+    (asserts! (is-eq tx-sender recipient) err-nft-recipient-only)
     (asserts! (is-eq balance supply) err-insufficient-balance)
     (as-contract (try! (nft-transfer? fractional-nft id tx-sender recipient)))
     (try! (ft-burn? fractions balance recipient))
     (map-delete balances { id: id, owner: recipient })
     (map-delete supplies id)
-    (print 
-      {
-        type: "sft_burn",
-        token-id: id,
-        amount: balance,
-        sender: recipient
-      }
-    )
-    (ok true)
-  )
-)
-
-(define-public 
-  (fractionalize
-    (recipient principal)
-    (nft <nft-trait>)
-    (id uint)
-    (supply uint)
-  )
-  (let 
-    (
-      (nft-id (+ (var-get identifier) u1))
-      (uri (unwrap! (try! (contract-call? nft get-token-uri id)) err-unknown-nft-uri))
-      (owner (unwrap! (try! (contract-call? nft get-owner id)) err-unknown-nft-owner))
-    )
-    (asserts! (is-eq tx-sender recipient) err-nft-owner-only)
-    (asserts! (is-eq tx-sender owner) err-nft-owner-only)
-    (asserts! (unwrap-panic (is-verified-contract (contract-of nft))) err-unverified-nft-contract)
-    (asserts! (> supply u0) err-invalid-supply-value)
-    (try! (contract-call? nft transfer id recipient (as-contract tx-sender)))
-    (try! (ft-mint? fractions supply recipient))
-    (map-set supplies nft-id supply)
-    (map-set balances { id: nft-id, owner: recipient } supply)
-    (map-set uris nft-id uri)
-    (map-set fractionalized-nfts { id: id, nft: (contract-of nft) } nft-id)
-    (print 
-      {
-        type: "sft_mint",
-        token-id: nft-id,
-        amount: supply,
-        recipient: recipient
-      }
-    )
-    (var-set identifier nft-id)
-    (ok nft-id)
-  )
-)
-
-(define-public 
-  (defractionalize
-    (recipient principal)
-    (nft <nft-trait>)
-    (id uint)
-  )
-  (let 
-    (
-      (nft-id (unwrap! (map-get? fractionalized-nfts { id: id, nft: (contract-of nft) }) (err u0)))
-      (balance (unwrap-panic (get-balance id recipient)))
-      (supply (unwrap-panic (get-total-supply id)))
-    )
-    (asserts! (is-eq tx-sender recipient) err-unauthorized)
-    (asserts! (is-eq balance supply) err-insufficient-balance)
-    (asserts! (unwrap-panic (is-verified-contract (contract-of nft))) err-unverified-nft-contract)
-    (as-contract (try! (contract-call? nft transfer id tx-sender recipient)))
-    (try! (ft-burn? fractions balance recipient))
-    (map-delete balances { id: id, owner: recipient })
-    (map-delete supplies id)
-    (map-delete fractionalized-nfts { id: id, nft: (contract-of nft) })
-    (map-delete uris nft-id)
     (print 
       {
         type: "sft_burn",
