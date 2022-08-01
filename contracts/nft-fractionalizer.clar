@@ -37,6 +37,7 @@
 (define-constant err-insufficient-balance (err u200))
 
 (define-constant err-invalid-supply-value (err u300))
+(define-constant err-invalid-nft-id (err u301))
 
 (define-read-only (get-balance (id uint) (who principal))
   (ok (default-to u0 (map-get? balances
@@ -140,6 +141,29 @@
         token-id: id,
         amount: balance,
         sender: recipient
+      }
+    )
+    (ok true)
+  )
+)
+
+(define-public (fractionalize (id uint) (recipient principal) (supply uint))
+  (let 
+    (
+      (owner (unwrap! (nft-get-owner? fractional-nft id) err-invalid-nft-id))
+    )
+    (asserts! (is-eq tx-sender recipient) err-nft-recipient-only)
+    (asserts! (is-eq tx-sender owner) err-nft-owner-only)
+    (asserts! (> supply u0) err-invalid-supply-value)
+    (try! (ft-mint? fractions supply recipient))
+    (map-set supplies id supply)
+    (map-set balances { id: id, owner: recipient } supply)
+    (print 
+      {
+        type: "sft_mint",
+        token-id: id,
+        amount: supply,
+        recipient: recipient
       }
     )
     (ok true)
